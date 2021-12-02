@@ -11,7 +11,7 @@ from nlb_tools.nwb_interface import NWBDataset
 
 
 
-class NLB(data.Dataset):
+class NWB(data.Dataset):
     def __init__(self, experiment, train, resample_val, shuffle, seed_val, seq_len, neur_count, seq_start_mode='all'):
 
         '''
@@ -32,7 +32,7 @@ class NLB(data.Dataset):
         
         # Instance variables
         
-        assert experiment in [i+1 in range(4)], 'experiment must be in range 1-4'
+        assert experiment in [i+1 for i in range(4)], 'experiment must be in range 1-4'
         self.experiment = experiment
         self.train = train
         self.seq_len = seq_len
@@ -46,44 +46,44 @@ class NLB(data.Dataset):
         self.N_sequences = None
         
         if experiment == 1:
-            if not os.path.isdir("000128"):
+            if not os.path.isdir("data/000128"):
                 print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000128/draft')
+                os.system('dandi download https://dandiarchive.org/dandiset/000128/draft -o data/')
 
             if train:
-                dataset = NWBDataset("000128/sub-Jenkins/", "*train", split_heldout=False)
+                dataset = NWBDataset("data/000128/sub-Jenkins/", "*train", split_heldout=False)
             else:
-                dataset = NWBDataset("000128/sub-Jenkins/", "*test", split_heldout=False)
+                dataset = NWBDataset("data/000128/sub-Jenkins/", "*test", split_heldout=False)
 
         elif experiment == 2:
-            if not os.path.isdir("000129"):
+            if not os.path.isdir("data/000129"):
                 print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000129/draft')
+                os.system('dandi download https://dandiarchive.org/dandiset/000129/draft -o data/')
 
             if train:
-                dataset = NWBDataset("000129/sub-Indy", "*train", split_heldout=False)
+                dataset = NWBDataset("data/000129/sub-Indy", "*train", split_heldout=False)
             else:
-                dataset = NWBDataset("000129/sub-Indy", "*test", split_heldout=False)
+                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
 
         elif experiment == 3:
-            if not os.path.isdir("000127"):
+            if not os.path.isdir("data/000127"):
                 print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000127')
+                os.system('dandi download https://dandiarchive.org/dandiset/000127 -o data/')
 
             if train:
-                dataset = NWBDataset("000127/sub-Han/", "*train", split_heldout=False)
+                dataset = NWBDataset("data/000127/sub-Han/", "*train", split_heldout=False)
             else:
-                dataset = NWBDataset("000129/sub-Indy", "*test", split_heldout=False)
+                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
 
         elif experiment == 4:
-            if not os.path.isdir("000130"):
+            if not os.path.isdir("data/000130"):
                 print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000130/draft')
+                os.system('dandi download https://dandiarchive.org/dandiset/000130/draft -o data/')
 
             if train:
-                dataset = NWBDataset("000130/sub-Haydn/", "*train", split_heldout=False)
+                dataset = NWBDataset("data/000130/sub-Haydn/", "*train", split_heldout=False)
             else:
-                dataset = NWBDataset("000129/sub-Indy", "*test", split_heldout=False)
+                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
 
 
         # Seed generator for consistent plots
@@ -105,25 +105,25 @@ class NLB(data.Dataset):
             if trial_len >= self.seq_len:
                 eligible_trials[ID] = trial_len
 
-        self.trial_ids = np.array(eligible_trails.keys())
+        self.trial_ids = np.array(list(eligible_trials.keys()))
         if shuffle: np.random.shuffle(self.trial_ids)
 
         cur_loc = 0
         possible_starts = [] # list of (ID, time) tuples
-        if sel.seq_start_mode == 'all':
+        if self.seq_start_mode == 'all':
             # allows for all possible sequences when all seq_len trials elems are from the same trial
-            for ID in self.trial_IDs:
+            for ID in self.trial_ids:
                 lt = [(ID,t) for t in range(eligible_trials[ID] - self.seq_len)]
                 possible_starts.extend(lt)
         
         elif self.seq_start_mode == 'unique':
             # creates sequences where each unique elem is in at most one sequence
-            for ID in self.trial_IDs: 
+            for ID in self.trial_ids: 
                 lt = [(ID,t) for t in range(0,eligible_trials[ID] - self.seq_len, self.seq_len)]
                 possible_starts.extend(lt)
         
         self.possible_starts = possible_starts
-        self.N_sequences = len(possible_start)
+        self.N_sequences = len(possible_starts)
         
         self.neuron_ids = np.array(self.dataset['spikes'].keys().tolist())
         np.random.shuffle(self.neuron_ids)
@@ -131,7 +131,7 @@ class NLB(data.Dataset):
         if neur_count == 0:
             self.neur_count = len(self.neuron_ids)
 
-        self.neuron_ids = self.neuron_ids[0:neur_count]
+        self.neuron_ids = self.neuron_ids[:neur_count]
 
         if seq_len == 0:
             self.seq_len = len(self.dataset['spikes'][self.neuron_ids[0]])
@@ -146,3 +146,13 @@ class NLB(data.Dataset):
     
     def __len__(self):
         return self.N_sequences
+
+
+if __name__ == '__main__':
+    nwb_train = NWB(1, True, 5, False, None, 20, 10)
+
+    print(nwb_train[0])
+
+
+
+
