@@ -2,11 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 import torch.utils.data as data
-
-## Download dataset and required packages if necessary
-os.system('pip install git+https://github.com/neurallatents/nlb_tools.git')
-os.system('pip install dandi')
-
 from nlb_tools.nwb_interface import NWBDataset
 
 
@@ -148,9 +143,9 @@ class NWB(data.Dataset):
 
 
 if __name__ == '__main__':
-    nwb_train = NWB(1, True, 5, False, None, 20, 10)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = 100)
 
-    print(nwb_train[0])
 
 
 
