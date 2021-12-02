@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.utils
 import torch.utils.data
-from torchvision import datasets, transforms
-from torch.autograd import Variable
+from torchvision import transforms
+import numpy as np
 import matplotlib.pyplot as plt 
 from model import VRNN
 from data_loader import NWB
@@ -20,6 +20,7 @@ def train(epoch):
     for batch_idx, (data, _) in enumerate(train_loader):
 
         #transforming data
+        print(data.shape)
         data = data.to(device)
         data = data.squeeze().transpose(0, 1) # (seq, batch, elem)
         data = (data - data.min()) / (data.max() - data.min())
@@ -83,7 +84,7 @@ else:
     device = torch.device('cpu')
 
 #hyperparameters
-x_dim = 28
+x_dim = 100
 h_dim = 100
 z_dim = 16
 n_layers =  1
@@ -96,20 +97,21 @@ print_every = 1000 # batches
 save_every = 10 # epochs
 
 #manual seed
+np.random.seed(seed)
 torch.manual_seed(seed)
 plt.ion()
 
 #init model + optimizer + datasets
 
 train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST('data', train=True, download=True,
-        transform=transforms.ToTensor()),
-    batch_size=batch_size, shuffle=True)
+    NWB(experiment=1, train=True, resample_val=5,
+        seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
+    batch_size=batch_size)
 
 test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST('data', train=False, 
-        transform=transforms.ToTensor()),
-    batch_size=batch_size, shuffle=True)
+    NWB(experiment=1, train=False, resample_val=5,
+        seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
+    batch_size=batch_size)
 
 model = VRNN(x_dim, h_dim, z_dim, n_layers)
 model = model.to(device)
@@ -123,6 +125,6 @@ for epoch in range(1, n_epochs + 1):
 
     #saving model
     if epoch % save_every == 1:
-        fn = 'saves/vrnn_state_dict_'+str(epoch)+'.pth'
+        fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
         torch.save(model.state_dict(), fn)
         print('Saved model to '+fn)

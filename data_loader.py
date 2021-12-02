@@ -12,18 +12,18 @@ from nlb_tools.nwb_interface import NWBDataset
 
 
 class NWB(data.Dataset):
-    def __init__(self, experiment, train, resample_val, shuffle, seed_val, seq_len, neur_count, seq_start_mode='all'):
+    def __init__(self, experiment, train, resample_val, seq_len, neur_count, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
         INPUT
         experiment     int from 1-4 chooses experiment (1: MC_Maze, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
         train          bool true -> train, false -> test
         resample_val   int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
-        shuffle        bool shuffles trials
-        seq_len        int length of individual sequences,     0 for full length
+        seq_len        int length of individual sequences
         neur_count     int count of neurons per trial,         0 for full length
         seq_start_mode str                                     ['all', 'unique']
-        
+        tranform       function                                
+
         OUTPUT
         neuron_id      2d int-array of neuron ids in data
         trial_id       1d int-array of trial ids in data
@@ -39,7 +39,7 @@ class NWB(data.Dataset):
         self.neur_count = neur_count
         assert seq_start_mode in {'all', 'unique'}, 'seq_start_mode must be in {all, unique}'
         self.seq_start_mode = seq_start_mode
-        
+        self.transform = transform if transform else lambda x:x
         self.dataset = None
         self.trail_ids = None
         self.neuron_ids = None
@@ -85,10 +85,8 @@ class NWB(data.Dataset):
             else:
                 dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
 
-
-        # Seed generator for consistent plots
-        np.random.seed(seed_val)
-
+        
+        # Resample data
         dataset.resample(resample_val)
 
         # Smooth spikes with 50 ms std Gaussian
@@ -99,11 +97,15 @@ class NWB(data.Dataset):
         self.trial_ids = np.unique(self.dataset['trial_id'])
         eligible_trials = {} # ID -> size
         
+        max_neur_count = len(self.dataset['spikes'])
+        assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
         # Only include trials of suffecient length
         for ID in self.trial_ids:
             trial_len = len(self.dataset[self.dataset['trial_id'] == ID])
             if trial_len >= self.seq_len:
                 eligible_trials[ID] = trial_len
+        
+        assert len(eligible_trials) > 0, 'no eligible trials, decrease sequence length'
 
         self.trial_ids = np.array(list(eligible_trials.keys()))
         if shuffle: np.random.shuffle(self.trial_ids)
@@ -133,14 +135,11 @@ class NWB(data.Dataset):
 
         self.neuron_ids = self.neuron_ids[:neur_count]
 
-        if seq_len == 0:
-            self.seq_len = len(self.dataset['spikes'][self.neuron_ids[0]])
-
     def __getitem__(self, index):
 
         trial_id, start = self.possible_starts[index]
         trial_id = np.array([trial_id])
-        data = self.dataset[trial_id]['spikes'][self.neuron_ids][start:start + self.seq_len]
+        data = self.transform(self.dataset[trial_id]['spikes'][self.neuron_ids][start:start + self.seq_len])
 
         return data, self.neuron_ids, trial_id
     
