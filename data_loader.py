@@ -40,6 +40,8 @@ class NWB(data.Dataset):
         self.neuron_ids = None
         self.N_sequences = None
         
+        print('Getting NWB Dataset...')
+
         if experiment == 1:
             if not os.path.isdir("data/000128"):
                 print("Downloading data")
@@ -79,32 +81,56 @@ class NWB(data.Dataset):
                 dataset = NWBDataset("data/000130/sub-Haydn/", "*train", split_heldout=False)
             else:
                 dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
+        
+        # Columns to drop
+        drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
+        
+        # Picking subset of spikes
+        self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
+        np.random.shuffle(self.neuron_ids)
 
+        if neur_count == 0:
+            self.neur_count = len(self.neuron_ids)
+
+        spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[neur_count:]]
+        self.neuron_ids = self.neuron_ids[:neur_count]
+        dataset.data.drop(drop_col + spk_drop_col, axis=1, inplace=True) 
         
         # Resample data
+        print("Resampling...")
         dataset.resample(resample_val)
 
         # Smooth spikes with 50 ms std Gaussian
+        print("Smoothing...")
         dataset.smooth_spk(50, name='smth_50')
 
         self.dataset = dataset.make_trial_data()
         
         self.trial_ids = np.unique(self.dataset['trial_id'])
         eligible_trials = {} # ID -> size
+        ineligible_trials = [] # ID
         
         max_neur_count = len(self.dataset['spikes'])
         assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
+        
         # Only include trials of suffecient length
+        print("Finding eligible trials...")
         for ID in self.trial_ids:
             trial_len = len(self.dataset[self.dataset['trial_id'] == ID])
             if trial_len >= self.seq_len:
                 eligible_trials[ID] = trial_len
+            else:
+                ineligible_trials.append(ID)
         
         assert len(eligible_trials) > 0, 'no eligible trials, decrease sequence length'
-
+        
+        # Drop ineligible trials
+        for tr in ineligible_trials:
+            self.dataset.drop(self.dataset[self.dataset.trial_id == tr].index, inplace=True) 
+        
         self.trial_ids = np.array(list(eligible_trials.keys()))
         if shuffle: np.random.shuffle(self.trial_ids)
-
+        
         cur_loc = 0
         possible_starts = [] # list of (ID, time) tuples
         if self.seq_start_mode == 'all':
@@ -122,20 +148,12 @@ class NWB(data.Dataset):
         self.possible_starts = possible_starts
         self.N_sequences = len(possible_starts)
         
-        self.neuron_ids = np.array(self.dataset['spikes'].keys().tolist())
-        np.random.shuffle(self.neuron_ids)
-
-        if neur_count == 0:
-            self.neur_count = len(self.neuron_ids)
-
-        self.neuron_ids = self.neuron_ids[:neur_count]
 
     def __getitem__(self, index):
 
         trial_id, start = self.possible_starts[index]
-        trial_id = np.array([trial_id])
-        data = self.transform(self.dataset[trial_id]['spikes'][self.neuron_ids][start:start + self.seq_len])
-
+        data  = self.dataset[self.dataset['trial_id'] == trial_id]['spikes_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
+        data = self.transform(data) 
         return data, self.neuron_ids, trial_id
     
     def __len__(self):
@@ -145,7 +163,8 @@ class NWB(data.Dataset):
 if __name__ == '__main__':
     nwb_train = NWB(experiment=1, train=True, resample_val=5,
                     seq_len=10, neur_count = 100)
-
+    print(len(nwb_train))
+    print(nwb_train[5])
 
 
 

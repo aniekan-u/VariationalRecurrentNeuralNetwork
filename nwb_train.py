@@ -77,15 +77,19 @@ def test(epoch):
 
 
 # changing device
+'''
 if torch.cuda.is_available():
     device = torch.device('cuda')
     torch.cuda.empty_cache()
 else:
     device = torch.device('cpu')
+'''
+
+device = torch.device('cpu')
 
 #hyperparameters
-x_dim = 100
-h_dim = 100
+x_dim = 20
+h_dim = 20
 z_dim = 16
 n_layers =  1
 n_epochs = 25
@@ -102,21 +106,24 @@ torch.manual_seed(seed)
 plt.ion()
 
 #init model + optimizer + datasets
-
+print("Creating Training Dataset and Dataloader...")
 train_loader = torch.utils.data.DataLoader(
     NWB(experiment=1, train=True, resample_val=5,
         seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
     batch_size=batch_size)
 
+print("Creating Test Dataset and Dataloader...")
 test_loader = torch.utils.data.DataLoader(
     NWB(experiment=1, train=False, resample_val=5,
         seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
     batch_size=batch_size)
 
+print("Creating Model...")
 model = VRNN(x_dim, h_dim, z_dim, n_layers)
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+print("Beginning Training...")
 for epoch in range(1, n_epochs + 1):
 
     #training + testing
