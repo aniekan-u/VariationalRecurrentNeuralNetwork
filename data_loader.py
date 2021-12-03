@@ -42,13 +42,16 @@ class NWB(data.Dataset):
         
         print('Getting NWB Dataset...')
 
+        # Columns to drop
+        drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
+        
         if experiment == 1:
             if not os.path.isdir("data/000128"):
                 print("Downloading data")
                 os.system('dandi download https://dandiarchive.org/dandiset/000128/draft -o data/')
 
             if train:
-                dataset = NWBDataset("data/000128/sub-Jenkins/", "*train", split_heldout=False)
+                dataset = NWBDataset("data/000128/sub-Jenkins/", "*train", split_heldout=False, skip_fields=drop_col)
             else:
                 dataset = NWBDataset("data/000128/sub-Jenkins/", "*test", split_heldout=False)
 
@@ -82,8 +85,6 @@ class NWB(data.Dataset):
             else:
                 dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
         
-        # Columns to drop
-        drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
         
         # Picking subset of spikes
         self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
@@ -130,7 +131,7 @@ class NWB(data.Dataset):
         
         self.trial_ids = np.array(list(eligible_trials.keys()))
         if shuffle: np.random.shuffle(self.trial_ids)
-        
+
         cur_loc = 0
         possible_starts = [] # list of (ID, time) tuples
         if self.seq_start_mode == 'all':

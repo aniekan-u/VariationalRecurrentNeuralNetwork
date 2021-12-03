@@ -88,7 +88,7 @@ else:
 device = torch.device('cpu')
 
 #hyperparameters
-x_dim = 20
+x_dim = 10
 h_dim = 20
 z_dim = 16
 n_layers =  1
@@ -107,16 +107,14 @@ plt.ion()
 
 #init model + optimizer + datasets
 print("Creating Training Dataset and Dataloader...")
-train_loader = torch.utils.data.DataLoader(
-    NWB(experiment=1, train=True, resample_val=5,
-        seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
-    batch_size=batch_size)
+nwb_train = NWB(experiment=1, train=True, resample_val=5,
+                seq_len=10, neur_count = x_dim),
+train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
 print("Creating Test Dataset and Dataloader...")
-test_loader = torch.utils.data.DataLoader(
-    NWB(experiment=1, train=False, resample_val=5,
-        seq_len=10, neur_count = x_dim, transform=transforms.ToTensor()),
-    batch_size=batch_size)
+nwb_test = NWB(experiment=1, train=False, resample_val=5,
+                seq_len=10, neur_count = x_dim),
+test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
 
 print("Creating Model...")
 model = VRNN(x_dim, h_dim, z_dim, n_layers)
