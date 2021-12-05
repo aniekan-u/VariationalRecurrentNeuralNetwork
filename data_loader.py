@@ -8,12 +8,6 @@ from nlb_tools.nwb_interface import NWBDataset
 
 
 class NWB(data.Dataset):
-    
-    # Class Variables
-
-    EXP_STR = {1: ('000128','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
-    EXP_NEURON_IDS = json.load('experiment_neuron_ids.json')
-
     def __init__(self, experiment, train, resample_val, seq_len, neur_count, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
@@ -31,6 +25,11 @@ class NWB(data.Dataset):
         trial_id       1d int-array of trial ids in data
         data           3d numpy array of trials x neurons x sequences
         '''
+        
+        # Experiment meta info
+
+        EXP_STR = {1: ('000128','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
+        EXP_NEURON_IDS = json.load(open('experiment_neuron_ids.json'))
         
         # Instance variables
         
@@ -54,9 +53,11 @@ class NWB(data.Dataset):
         if neur_count == 0:
             self.neur_count = len(self.neuron_ids)
 
-        spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[neur_count:]]
+        spk_drop_col = [spk for spk in self.neuron_ids[neur_count:]]
         self.neuron_ids = self.neuron_ids[:neur_count]
-        
+        print(f'neuron IDs: {self.neuron_ids}')
+        print(f'spikes dropped: {spk_drop_col}')
+
         # Columns to drop
         drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
         drop_col += spk_drop_col
@@ -76,8 +77,10 @@ class NWB(data.Dataset):
             dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
 
         
-        print(dataset.data) 
-        
+        print(dataset.data)
+        print(dataset.data.keys().tolist())
+        print(data.data.columns.tolist()) 
+
         # Resample data
         print("Resampling...")
         dataset.resample(resample_val)
