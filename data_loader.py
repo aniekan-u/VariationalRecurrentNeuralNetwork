@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch.utils.data as data
 from nlb_tools.nwb_interface import NWBDataset
+from nlb_tools.chop import *
 
 
 
@@ -12,7 +13,7 @@ class NWB(data.Dataset):
 
         '''
         INPUT
-        experiment     int from 1-4 chooses experiment (1: MC_Maze, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
+        experiment     int from 1-4 chooses experiment (1: MC_Maze_Medium, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
         train          bool true -> train, false -> test
         resample_val   int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
         seq_len        int length of individual sequences
@@ -28,8 +29,7 @@ class NWB(data.Dataset):
         
         # Experiment meta info
 
-        EXP_STR = {1: ('000128','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
-        EXP_NEURON_IDS = json.load(open('experiment_neuron_ids.json'))
+        EXP_STR = {1: ('000139','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
         
         # Instance variables
         
@@ -46,21 +46,8 @@ class NWB(data.Dataset):
         self.neuron_ids = None
         self.N_sequences = None
         
-        # Picking subset of spikes
-        self.neuron_ids = np.array(EXP_NEURON_IDS[EXP_STR[experiment][0]])
-        np.random.shuffle(self.neuron_ids)
-
-        if neur_count == 0:
-            self.neur_count = len(self.neuron_ids)
-
-        spk_drop_col = [spk for spk in self.neuron_ids[neur_count:]]
-        self.neuron_ids = self.neuron_ids[:neur_count]
-        print(f'neuron IDs: {self.neuron_ids}')
-        print(f'spikes dropped: {spk_drop_col}')
-
         # Columns to drop
         drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
-        drop_col += spk_drop_col
         
         print("Getting Dataset....")       
         save_path = 'data/' + EXP_STR[experiment][0] + '/'
@@ -76,10 +63,18 @@ class NWB(data.Dataset):
         else:
             dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
 
-        
-        print(dataset.data)
-        print(dataset.data.keys().tolist())
-        print(data.data.columns.tolist()) 
+        # Picking subset of spikes
+        self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
+        np.random.shuffle(self.neuron_ids)
+
+        if neur_count == 0:
+            self.neur_count = len(self.neuron_ids)
+
+        spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[neur_count:]]
+        self.neuron_ids = self.neuron_ids[:neur_count]
+        dataset.data.drop(spk_drop_col, axis=1, inplace=True)
+
+        print(f'neuron IDs: {self.neuron_ids}')
 
         # Resample data
         print("Resampling...")
@@ -88,13 +83,13 @@ class NWB(data.Dataset):
         # Smooth spikes with 50 ms std Gaussian
         print("Smoothing...")
         dataset.smooth_spk(50, name='smth_50')
-
+        print('1')
         self.dataset = dataset.make_trial_data()
-        
+        print('2')
         self.trial_ids = np.unique(self.dataset['trial_id'])
         eligible_trials = {} # ID -> size
         ineligible_trials = [] # ID
-        
+        print('3')
         max_neur_count = len(self.dataset['spikes'])
         assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
         
@@ -146,6 +141,11 @@ class NWB(data.Dataset):
 
 
 if __name__ == '__main__':
+    seed = 128
+
+    #manual seed
+    np.random.seed(seed)
+    # torch.manual_seed(seed)
     nwb_train = NWB(experiment=1, train=True, resample_val=5,
                     seq_len=10, neur_count = 100)
     print(len(nwb_train))

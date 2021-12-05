@@ -88,7 +88,7 @@ else:
 device = torch.device('cpu')
 
 #hyperparameters
-x_dim = 10
+x_dim = 100
 h_dim = 20
 z_dim = 16
 n_layers =  1
@@ -96,25 +96,26 @@ n_epochs = 25
 clip = 10
 learning_rate = 1e-3
 batch_size = 8 #128
-seed = 128
+seed = 1
 print_every = 1000 # batches
 save_every = 10 # epochs
 
 #manual seed
-np.random.seed(seed)
-torch.manual_seed(seed)
-plt.ion()
+# np.random.seed(seed)
+# torch.manual_seed(seed)
+# plt.ion()
 
 #init model + optimizer + datasets
 print("Creating Training Dataset and Dataloader...")
 nwb_train = NWB(experiment=1, train=True, resample_val=5,
                 seq_len=10, neur_count = x_dim),
-train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
+print('NWB_TRAIN created')
+train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size, num_workers=1)
 
 print("Creating Test Dataset and Dataloader...")
 nwb_test = NWB(experiment=1, train=False, resample_val=5,
                 seq_len=10, neur_count = x_dim),
-test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
+test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size, num_workers=1)
 
 print("Creating Model...")
 model = VRNN(x_dim, h_dim, z_dim, n_layers)
