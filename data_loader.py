@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import pandas as pd
 import torch.utils.data as data
@@ -7,6 +8,12 @@ from nlb_tools.nwb_interface import NWBDataset
 
 
 class NWB(data.Dataset):
+    
+    # Class Variables
+
+    EXP_STR = {1: ('000128','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
+    EXP_NEURON_IDS = json.load('experiment_neuron_ids.json')
+
     def __init__(self, experiment, train, resample_val, seq_len, neur_count, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
@@ -40,54 +47,8 @@ class NWB(data.Dataset):
         self.neuron_ids = None
         self.N_sequences = None
         
-        print('Getting NWB Dataset...')
-
-        # Columns to drop
-        drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
-        
-        if experiment == 1:
-            if not os.path.isdir("data/000128"):
-                print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000128/draft -o data/')
-
-            if train:
-                dataset = NWBDataset("data/000128/sub-Jenkins/", "*train", split_heldout=False, skip_fields=drop_col)
-            else:
-                dataset = NWBDataset("data/000128/sub-Jenkins/", "*test", split_heldout=False)
-
-        elif experiment == 2:
-            if not os.path.isdir("data/000129"):
-                print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000129/draft -o data/')
-
-            if train:
-                dataset = NWBDataset("data/000129/sub-Indy", "*train", split_heldout=False)
-            else:
-                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
-
-        elif experiment == 3:
-            if not os.path.isdir("data/000127"):
-                print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000127 -o data/')
-
-            if train:
-                dataset = NWBDataset("data/000127/sub-Han/", "*train", split_heldout=False)
-            else:
-                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
-
-        elif experiment == 4:
-            if not os.path.isdir("data/000130"):
-                print("Downloading data")
-                os.system('dandi download https://dandiarchive.org/dandiset/000130/draft -o data/')
-
-            if train:
-                dataset = NWBDataset("data/000130/sub-Haydn/", "*train", split_heldout=False)
-            else:
-                dataset = NWBDataset("data/000129/sub-Indy", "*test", split_heldout=False)
-        
-        
         # Picking subset of spikes
-        self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
+        self.neuron_ids = np.array(EXP_NEURON_IDS[EXP_STR[experiment][0]])
         np.random.shuffle(self.neuron_ids)
 
         if neur_count == 0:
@@ -95,7 +56,27 @@ class NWB(data.Dataset):
 
         spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[neur_count:]]
         self.neuron_ids = self.neuron_ids[:neur_count]
-        dataset.data.drop(drop_col + spk_drop_col, axis=1, inplace=True) 
+        
+        # Columns to drop
+        drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
+        drop_col += spk_drop_col
+        
+        print("Getting Dataset....")       
+        save_path = 'data/' + EXP_STR[experiment][0] + '/'
+        data_path = save_path + EXP_STR[experiment][1] + '/'
+        dandi_path = EXP_STR[experiment][0] + '/draft'
+        
+        if not os.path.isdir(save_path):
+            print("Downloading data")
+            os.system('dandi download https://dandiarchive.org/dandiset/' + dandi_path + ' -o data/')
+
+        if self.train:
+            dataset = NWBDataset(data_path, "*train", split_heldout=False, skip_fields=drop_col)
+        else:
+            dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
+
+        
+        print(dataset.data) 
         
         # Resample data
         print("Resampling...")
