@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import pandas as pd
+import torch
 import torch.utils.data as data
 from nlb_tools.nwb_interface import NWBDataset
 from nlb_tools.chop import *
@@ -130,27 +131,36 @@ class NWB(data.Dataset):
         
 
     def __getitem__(self, index):
-
+        
         trial_id, start = self.possible_starts[index]
         data  = self.dataset[self.dataset['trial_id'] == trial_id]['spikes_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
-        data = self.transform(data) 
-        return data, self.neuron_ids, trial_id
-    
+        data = self.transform(data)
+        return data, trial_id
+
     def __len__(self):
         return self.N_sequences
 
 
 if __name__ == '__main__':
+    #hyperparameters
+    x_dim = 100
+    h_dim = 20
+    z_dim = 16
+    batch_size = 8 #128
     seed = 128
-
-    #manual seed
+    
     np.random.seed(seed)
-    # torch.manual_seed(seed)
-    nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = 100)
-    print(len(nwb_train))
-    print(nwb_train[5])
+    torch.manual_seed(seed)
 
-
-
-
+    print("Creating Training Dataset and Dataloader...")
+    train_dataset = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = x_dim),
+    
+    print(type(train_dataset))
+    sample = train_dataset[0]
+    print(sample)
+    print(len(sample))
+    print('NWB_TRAIN created')
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+    

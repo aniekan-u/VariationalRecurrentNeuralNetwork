@@ -15,12 +15,12 @@ Neural Network (VRNN) from https://arxiv.org/abs/1506.02216
 using unimodal isotropic gaussian distributions for 
 inference, prior, and generating models."""
 
-def train(epoch):
+def train(epoch, train_loader):
     train_loss = 0
-    for batch_idx, (data, _) in enumerate(train_loader):
-
+    for batch_idx, (data, _, _) in enumerate(train_loader):
+        
         #transforming data
-        print(data.shape)
+        data = data.to(torch.float)
         data = data.to(device)
         data = data.squeeze().transpose(0, 1) # (seq, batch, elem)
         data = (data - data.min()) / (data.max() - data.min())
@@ -53,13 +53,13 @@ def train(epoch):
         epoch, train_loss / len(train_loader.dataset)))
     
 
-def test(epoch):
+def test(epoch, test_loader):
     """uses test data to evaluate 
     likelihood of the model"""
 
     mean_kld_loss, mean_nll_loss = 0, 0
     with torch.no_grad():
-        for i, (data, _) in enumerate(test_loader):                                            
+        for i, (data, _, _) in enumerate(test_loader):                                            
 
             data = data.to(device)
             data = data.squeeze().transpose(0, 1)
@@ -75,7 +75,6 @@ def test(epoch):
     print('====> Test set loss: KLD Loss = {:.4f}, NLL Loss = {:.4f} '.format(
         mean_kld_loss, mean_nll_loss))
 
-
 # changing device
 '''
 if torch.cuda.is_available():
@@ -87,50 +86,52 @@ else:
 
 device = torch.device('cpu')
 
-#hyperparameters
-x_dim = 100
-h_dim = 20
-z_dim = 16
-n_layers =  1
-n_epochs = 25
-clip = 10
-learning_rate = 1e-3
-batch_size = 8 #128
-seed = 1
-print_every = 1000 # batches
-save_every = 10 # epochs
+if __name__ == '__main__':
+    
+    #hyperparameters
+    x_dim = 100
+    h_dim = 20
+    z_dim = 16
+    n_layers =  1
+    n_epochs = 25
+    clip = 10
+    learning_rate = 1e-3
+    batch_size = 8 #128
+    seed = 1
+    print_every = 1000 # batches
+    save_every = 10 # epochs
 
-#manual seed
-# np.random.seed(seed)
-# torch.manual_seed(seed)
-# plt.ion()
+    #manual seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    plt.ion()
 
-#init model + optimizer + datasets
-print("Creating Training Dataset and Dataloader...")
-nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                seq_len=10, neur_count = x_dim),
-print('NWB_TRAIN created')
-train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size, num_workers=1)
+    #init model + optimizer + datasets
+    print("Creating Training Dataset and Dataloader...")
+    train_dataset = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = x_dim),
+    print('NWB_TRAIN created')
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
-print("Creating Test Dataset and Dataloader...")
-nwb_test = NWB(experiment=1, train=False, resample_val=5,
-                seq_len=10, neur_count = x_dim),
-test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size, num_workers=1)
+    print("Creating Test Dataset and Dataloader...")
+    test_dataset = NWB(experiment=1, train=False, resample_val=5,
+                    seq_len=10, neur_count = x_dim),
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
 
-print("Creating Model...")
-model = VRNN(x_dim, h_dim, z_dim, n_layers)
-model = model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    print("Creating Model...")
+    model = VRNN(x_dim, h_dim, z_dim, n_layers)
+    model = model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-print("Beginning Training...")
-for epoch in range(1, n_epochs + 1):
+    print("Beginning Training...")
+    for epoch in range(1, n_epochs + 1):
 
-    #training + testing
-    train(epoch)
-    test(epoch)
+        #training + testing
+        train(epoch, train_loader)
+        test(epoch, test_loader)
 
-    #saving model
-    if epoch % save_every == 1:
-        fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
-        torch.save(model.state_dict(), fn)
-        print('Saved model to '+fn)
+        #saving model
+        if epoch % save_every == 1:
+            fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+            torch.save(model.state_dict(), fn)
+            print('Saved model to '+fn)
