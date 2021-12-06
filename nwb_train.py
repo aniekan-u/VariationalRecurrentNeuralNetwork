@@ -15,7 +15,7 @@ Neural Network (VRNN) from https://arxiv.org/abs/1506.02216
 using unimodal isotropic gaussian distributions for
 inference, prior, and generating models."""
 
-def train(epoch, train_loader):
+def train(epoch, train_loader, clip):
     train_loss = 0
     for batch_idx, (data, _, _) in enumerate(train_loader):
 
@@ -61,6 +61,8 @@ def test(epoch, test_loader):
     with torch.no_grad():
         for i, (data, _, _) in enumerate(test_loader):
 
+            #transforming data
+            data = data.to(torch.float)
             data = data.to(device)
             data = data.squeeze().transpose(0, 1)
             data = (data - data.min()) / (data.max() - data.min())
@@ -87,20 +89,26 @@ if __name__ == '__main__':
 
     #device = torch.device('cpu')
 
-    #hyperparameters
+    # Hyperparameters
+    
+    # Model Parameters
     x_dim = 100
     h_dim = 20
     z_dim = 16
     n_layers =  1
-    n_epochs = 1
+    
+    # Training Parameters
+    n_epochs = 150
     clip = 10
     learning_rate = 1e-3
-    batch_size = 8 #128
-    n_seq = 200
+    batch_size = 4
+    n_train_seq = 500
+    n_test_seq = 100
     seed = 1
-    print_every = 1000 # batches
-    save_every = 10 # epochs
 
+    # IO
+    print_every = 100 # batches
+    save_every = 10 # epochs
 
     #manual seed
     np.random.seed(seed)
@@ -110,12 +118,12 @@ if __name__ == '__main__':
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
     nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = x_dim, N_seq=n_seq)
+                    seq_len=10, neur_count = x_dim, N_seq=n_train_seq)
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
     print("Creating Test Dataset and Dataloader...")
     nwb_test = NWB(experiment=1, train=False, resample_val=5,
-                    seq_len=10, neur_count = x_dim, N_seq=n_seq)
+                    seq_len=10, neur_count = x_dim, N_seq=n_test_seq)
     test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
 
     print("Creating Model...")
@@ -127,7 +135,7 @@ if __name__ == '__main__':
     for epoch in range(1, n_epochs + 1):
 
         #training + testing
-        train(epoch, train_loader)
+        train(epoch, train_loader, clip)
         test(epoch, test_loader)
 
         #saving model

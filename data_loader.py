@@ -10,7 +10,7 @@ import torch
 
 
 class NWB(data.Dataset):
-    def __init__(self, experiment, train, resample_val, seq_len, neur_count, shuffle=False, seq_start_mode='all', transform=None):
+    def __init__(self, experiment, train, resample_val, seq_len, neur_count, N_seq, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
         INPUT
