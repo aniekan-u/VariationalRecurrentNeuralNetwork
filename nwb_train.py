@@ -43,11 +43,11 @@ def train(epoch, train_loader, clip):
                 kld_loss / batch_size,
                 nll_loss / batch_size))
 
-            sample = model.sample(torch.tensor(28, device=device))
+            sample = model.sample(torch.tensor(50, device=device))
             sample = sample.to(torch.device('cpu')).numpy()
             ex_neur = np.random.permutation(sample.shape[1])
             plt.clf()
-            plt.plot(sample[:,ex_neur[:10]])
+            plt.plot(sample[:,ex_neur[:25]])
             plt.xlabel('Time Bins')
             plt.ylabel('Rates')
             plt.pause(1e-6)
@@ -107,12 +107,14 @@ if __name__ == '__main__':
     clip = 10
     learning_rate = 1e-3
     batch_size = 4
-    n_train_seq = 500
-    n_test_seq = 100
+    n_train_seq = 1000
+    n_test_seq = 200
+    seq_len_train = 50
+    seq_len_test = 50 
     seed = 1
 
     # IO
-    print_every = 50 # batches
+    print_every = 20 # batches
     save_every = 10 # epochs
 
     #manual seed
@@ -123,12 +125,12 @@ if __name__ == '__main__':
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
     nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = x_dim, N_seq=n_train_seq)
+                    seq_len=seq_len_train, neur_count = x_dim, N_seq=n_train_seq)
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
     print("Creating Test Dataset and Dataloader...")
     nwb_test = NWB(experiment=1, train=False, resample_val=5,
-                    seq_len=10, neur_count = x_dim, N_seq=n_test_seq)
+                    seq_len=seq_len_test, neur_count = x_dim, N_seq=n_test_seq)
     test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
 
     print("Creating Model...")
