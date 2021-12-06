@@ -2,10 +2,10 @@ import os
 import json
 import numpy as np
 import pandas as pd
-import torch
 import torch.utils.data as data
 from nlb_tools.nwb_interface import NWBDataset
 from nlb_tools.chop import *
+import torch
 
 
 
@@ -20,20 +20,20 @@ class NWB(data.Dataset):
         seq_len        int length of individual sequences
         neur_count     int count of neurons per trial,         0 for full length
         seq_start_mode str                                     ['all', 'unique']
-        tranform       function                                
+        tranform       function
 
         OUTPUT
         neuron_id      2d int-array of neuron ids in data
         trial_id       1d int-array of trial ids in data
         data           3d numpy array of trials x neurons x sequences
         '''
-        
+
         # Experiment meta info
 
         EXP_STR = {1: ('000139','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
-        
+
         # Instance variables
-        
+
         assert experiment in [i+1 for i in range(4)], 'experiment must be in range 1-4'
         self.experiment = experiment
         self.train = train
@@ -46,15 +46,15 @@ class NWB(data.Dataset):
         self.trail_ids = None
         self.neuron_ids = None
         self.N_sequences = None
-        
+
         # Columns to drop
         drop_col = ['cursor_pos', 'eye_pos', 'hand_pos', 'hand_vel']
-        
-        print("Getting Dataset....")       
+
+        print("Getting Dataset....")
         save_path = 'data/' + EXP_STR[experiment][0] + '/'
         data_path = save_path + EXP_STR[experiment][1] + '/'
         dandi_path = EXP_STR[experiment][0] + '/draft'
-        
+
         if not os.path.isdir(save_path):
             print("Downloading data")
             os.system('dandi download https://dandiarchive.org/dandiset/' + dandi_path + ' -o data/')
@@ -93,7 +93,7 @@ class NWB(data.Dataset):
         print('3')
         max_neur_count = len(self.dataset['spikes'])
         assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
-        
+
         # Only include trials of suffecient length
         print("Finding eligible trials...")
         for ID in self.trial_ids:
@@ -102,13 +102,13 @@ class NWB(data.Dataset):
                 eligible_trials[ID] = trial_len
             else:
                 ineligible_trials.append(ID)
-        
+
         assert len(eligible_trials) > 0, 'no eligible trials, decrease sequence length'
-        
+
         # Drop ineligible trials
         for tr in ineligible_trials:
-            self.dataset.drop(self.dataset[self.dataset.trial_id == tr].index, inplace=True) 
-        
+            self.dataset.drop(self.dataset[self.dataset.trial_id == tr].index, inplace=True)
+
         self.trial_ids = np.array(list(eligible_trials.keys()))
         if shuffle: np.random.shuffle(self.trial_ids)
 
@@ -119,48 +119,36 @@ class NWB(data.Dataset):
             for ID in self.trial_ids:
                 lt = [(ID,t) for t in range(eligible_trials[ID] - self.seq_len)]
                 possible_starts.extend(lt)
-        
+
         elif self.seq_start_mode == 'unique':
             # creates sequences where each unique elem is in at most one sequence
-            for ID in self.trial_ids: 
+            for ID in self.trial_ids:
                 lt = [(ID,t) for t in range(0,eligible_trials[ID] - self.seq_len, self.seq_len)]
                 possible_starts.extend(lt)
-        
+
         self.possible_starts = possible_starts
         self.N_sequences = len(possible_starts)
-        
+
 
     def __getitem__(self, index):
-        
+
         trial_id, start = self.possible_starts[index]
         data  = self.dataset[self.dataset['trial_id'] == trial_id]['spikes_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
         data = self.transform(data)
-        return data, trial_id
+        return data, self.neuron_ids, trial_id
 
     def __len__(self):
         return self.N_sequences
 
 
 if __name__ == '__main__':
-    #hyperparameters
-    x_dim = 100
-    h_dim = 20
-    z_dim = 16
-    batch_size = 8 #128
     seed = 128
-    
+
+    #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = 100)
 
-    print("Creating Training Dataset and Dataloader...")
-    train_dataset = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = x_dim),
-    
-    print(type(train_dataset))
-    sample = train_dataset[0]
-    print(sample)
-    print(len(sample))
-    print('NWB_TRAIN created')
-    
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
-    
+    print(nwb_train.__getitem__(1))
+
