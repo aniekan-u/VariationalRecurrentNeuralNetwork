@@ -19,6 +19,7 @@ class NWB(data.Dataset):
         resample_val   int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
         seq_len        int length of individual sequences
         neur_count     int count of neurons per trial,         0 for full length
+        N_seq          int number of unique seqs               0 for max
         seq_start_mode str                                     ['all', 'unique']
         tranform       function
 
@@ -126,9 +127,11 @@ class NWB(data.Dataset):
                 lt = [(ID,t) for t in range(0,eligible_trials[ID] - self.seq_len, self.seq_len)]
                 possible_starts.extend(lt)
 
-        self.possible_starts = possible_starts
-        self.N_sequences = len(possible_starts)
-
+        if N_seq > len(possible_starts) or N_seq == 0:
+            self.N_sequences = len(possible_starts)
+        else:
+            self.N_sequences = N_seq
+        self.possible_starts = possible_starts[:self.N_sequences]
 
     def __getitem__(self, index):
 

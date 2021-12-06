@@ -44,7 +44,7 @@ def train(epoch, train_loader):
                 nll_loss / batch_size))
 
             sample = model.sample(torch.tensor(28, device=device))
-            plt.imshow(sample.to(torch.device('cpu')).numpy())
+            plt.plot(sample.to(torch.device('cpu')).numpy())
             plt.pause(1e-6)
 
         train_loss += loss.item()
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     #device = torch.device('cpu')
 
     #hyperparameters
-    x_dim = 10
+    x_dim = 100
     h_dim = 20
     z_dim = 16
     n_layers =  1
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     clip = 10
     learning_rate = 1e-3
     batch_size = 8 #128
+    n_seq = 200
     seed = 1
     print_every = 1000 # batches
     save_every = 10 # epochs
@@ -108,16 +109,13 @@ if __name__ == '__main__':
 
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
-    nwb_train_1 = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = x_dim)
-
-
-    print('NWB_TRAIN created')
-    train_loader = torch.utils.data.DataLoader(nwb_train_1, batch_size=batch_size)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = x_dim, N_seq=n_seq)
+    train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
     print("Creating Test Dataset and Dataloader...")
     nwb_test = NWB(experiment=1, train=False, resample_val=5,
-                    seq_len=10, neur_count = x_dim),
+                    seq_len=10, neur_count = x_dim, N_seq=n_seq)
     test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
 
     print("Creating Model...")
