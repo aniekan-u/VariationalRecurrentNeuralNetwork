@@ -5,26 +5,26 @@ import torch.utils
 import torch.utils.data
 from torchvision import transforms
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from model import VRNN
 from data_loader import NWB
 
 
 """implementation of the Variational Recurrent
 Neural Network (VRNN) from https://arxiv.org/abs/1506.02216
-using unimodal isotropic gaussian distributions for 
+using unimodal isotropic gaussian distributions for
 inference, prior, and generating models."""
 
 def train(epoch, train_loader):
     train_loss = 0
     for batch_idx, (data, _, _) in enumerate(train_loader):
-        
+
         #transforming data
         data = data.to(torch.float)
         data = data.to(device)
         data = data.squeeze().transpose(0, 1) # (seq, batch, elem)
         data = (data - data.min()) / (data.max() - data.min())
-        
+
         #forward + backward + optimize
         optimizer.zero_grad()
         kld_loss, nll_loss, _, _ = model(data)
@@ -42,7 +42,7 @@ def train(epoch, train_loader):
                 100. * batch_idx / len(train_loader),
                 kld_loss / batch_size,
                 nll_loss / batch_size))
-            
+
             sample = model.sample(torch.tensor(28, device=device))
             plt.imshow(sample.to(torch.device('cpu')).numpy())
             plt.pause(1e-6)
@@ -51,15 +51,15 @@ def train(epoch, train_loader):
 
     print('====> Epoch: {} Average loss: {:.4f}'.format(
         epoch, train_loss / len(train_loader.dataset)))
-    
+
 
 def test(epoch, test_loader):
-    """uses test data to evaluate 
+    """uses test data to evaluate
     likelihood of the model"""
 
     mean_kld_loss, mean_nll_loss = 0, 0
     with torch.no_grad():
-        for i, (data, _, _) in enumerate(test_loader):                                            
+        for i, (data, _, _) in enumerate(test_loader):
 
             data = data.to(device)
             data = data.squeeze().transpose(0, 1)
@@ -71,35 +71,35 @@ def test(epoch, test_loader):
 
     mean_kld_loss /= len(test_loader.dataset)
     mean_nll_loss /= len(test_loader.dataset)
-   
+
     print('====> Test set loss: KLD Loss = {:.4f}, NLL Loss = {:.4f} '.format(
         mean_kld_loss, mean_nll_loss))
 
+
 # changing device
-'''
 if torch.cuda.is_available():
-    device = torch.device('cuda')
+    device = torch.device('cuda:0')
     torch.cuda.empty_cache()
 else:
     device = torch.device('cpu')
-'''
-
-device = torch.device('cpu')
 
 if __name__ == '__main__':
-    
+
+    #device = torch.device('cpu')
+
     #hyperparameters
-    x_dim = 100
+    x_dim = 10
     h_dim = 20
     z_dim = 16
     n_layers =  1
-    n_epochs = 25
+    n_epochs = 1
     clip = 10
     learning_rate = 1e-3
     batch_size = 8 #128
     seed = 1
     print_every = 1000 # batches
     save_every = 10 # epochs
+
 
     #manual seed
     np.random.seed(seed)
@@ -108,15 +108,17 @@ if __name__ == '__main__':
 
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
-    train_dataset = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = x_dim),
+    nwb_train_1 = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = x_dim)
+
+
     print('NWB_TRAIN created')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+    train_loader = torch.utils.data.DataLoader(nwb_train_1, batch_size=batch_size)
 
     print("Creating Test Dataset and Dataloader...")
-    test_dataset = NWB(experiment=1, train=False, resample_val=5,
+    nwb_test = NWB(experiment=1, train=False, resample_val=5,
                     seq_len=10, neur_count = x_dim),
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
+    test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
 
     print("Creating Model...")
     model = VRNN(x_dim, h_dim, z_dim, n_layers)
@@ -135,3 +137,4 @@ if __name__ == '__main__':
             fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to '+fn)
+
