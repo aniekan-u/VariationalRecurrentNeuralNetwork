@@ -24,7 +24,7 @@ def train(epoch, train_loader, clip):
         data = data.to(device)
         data = data.squeeze().transpose(0, 1) # (seq, batch, elem)
         data = (data - data.min()) / (data.max() - data.min())
-
+        
         #forward + backward + optimize
         optimizer.zero_grad()
         kld_loss, nll_loss, _, _ = model(data)
@@ -44,7 +44,12 @@ def train(epoch, train_loader, clip):
                 nll_loss / batch_size))
 
             sample = model.sample(torch.tensor(28, device=device))
-            plt.plot(sample.to(torch.device('cpu')).numpy())
+            sample = sample.to(torch.device('cpu')).numpy()
+            ex_neur = np.random.permutation(sample.shape[1])
+            plt.clf()
+            plt.plot(sample[:,ex_neur[:10]])
+            plt.xlabel('Time Bins')
+            plt.ylabel('Rates')
             plt.pause(1e-6)
 
         train_loss += loss.item()
@@ -107,7 +112,7 @@ if __name__ == '__main__':
     seed = 1
 
     # IO
-    print_every = 100 # batches
+    print_every = 50 # batches
     save_every = 10 # epochs
 
     #manual seed
