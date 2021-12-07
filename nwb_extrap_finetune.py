@@ -29,7 +29,7 @@ def train(epoch, train_loader, clip, optimizer):
         optimizer.zero_grad()
         start, end = seq_len_primer, seq_len_primer + seq_len_extrap
         kld_loss, nll_loss, pred, _, _ = model.extrap(data[:start,:,:])
-        MSE = torch.mean((data[start:end,:,:] - pred)**2)
+        MSE = torch.mean((data[start:end,:,:] - pred)**2).item()
         loss = kld_loss + nll_loss + MSE
         loss.backward()
         optimizer.step()
