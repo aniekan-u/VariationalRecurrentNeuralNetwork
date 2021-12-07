@@ -106,9 +106,7 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     batch_size = 4
     n_train_seq = 1000
-    n_test_seq = 200
     seq_len_train = 50
-    seq_len_test = 50 
     seed = 1
     
     # Events
@@ -116,6 +114,7 @@ if __name__ == '__main__':
     save_every = 10 # epochs
     decay_every = 10 # epochs
     decay_factor = 0.5 
+    start_decay = 40
 
     #manual seed
     np.random.seed(seed)
@@ -164,5 +163,5 @@ if __name__ == '__main__':
             print('Saved model to '+fn)
             break
 
-        if epoch > 40 and epoch % decay_every and learning_rate > 0.0001:
+        if epoch > start_decay and epoch % decay_every and learning_rate > 0.0001:
             learning_rate *= decay_factor
