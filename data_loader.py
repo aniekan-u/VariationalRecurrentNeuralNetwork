@@ -61,18 +61,25 @@ class NWB(data.Dataset):
             os.system('dandi download https://dandiarchive.org/dandiset/' + dandi_path + ' -o data/')
 
         if self.mode == 'train' or self.mode == 'val':
-            dataset = NWBDataset(data_path, "*train", split_heldout=False, skip_fields=drop_col)
+            dataset = NWBDataset(data_path, "*train", split_heldout=True, skip_fields=drop_col)
         if self.mode == 'test':
             dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
 
         # Picking subset of spikes
-        self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
+        if self.mode == 'val':
+            self.spk_field = 'heldout_spikes'
+            dataset.data.drop('spikes', axis=1, inplace=True)
+        else:
+            self.spk_field = 'spikes'
+            dataset.data.drop('heldout_spikes', axis=1, inplace=True)
+
+        self.neuron_ids = np.array(dataset.data[self.spk_field].keys().tolist())
         np.random.shuffle(self.neuron_ids)
 
         if neur_count == 0:
             self.neur_count = len(self.neuron_ids)
 
-        spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[neur_count:]]
+        spk_drop_col = [(self.spk_field, spk) for spk in self.neuron_ids[neur_count:]]
         self.neuron_ids = self.neuron_ids[:neur_count]
         dataset.data.drop(spk_drop_col, axis=1, inplace=True)
 
@@ -85,14 +92,13 @@ class NWB(data.Dataset):
         # Smooth spikes with 50 ms std Gaussian
         print("Smoothing...")
         dataset.smooth_spk(50, name='smth_50')
-        print('1')
+        
         self.dataset = dataset.make_trial_data()
-        print('2')
+        
         self.trial_ids = np.unique(self.dataset['trial_id'])
         eligible_trials = {} # ID -> size
         ineligible_trials = [] # ID
-        print('3')
-        max_neur_count = len(self.dataset['spikes'])
+        max_neur_count = len(self.dataset[self.spk_field])
         assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
 
         # Only include trials of suffecient length
@@ -132,16 +138,12 @@ class NWB(data.Dataset):
         else:
             self.N_sequences = N_seq
 
-        if self.mode == 'train':
-             self.possible_starts = possible_starts[:self.N_sequences]
-        elif self.mode == 'val':
-            self.possible_starts = possible_starts[self.N_sequences:int(1.2 * self.N_sequences)] # uses same N_seq for train and val
-            self.N_sequences = int(1.2 * self.N_sequences)
+        self.possible_starts = possible_starts[:self.N_sequences]
     
     def __getitem__(self, index):
 
         trial_id, start = self.possible_starts[index]
-        data  = self.dataset[self.dataset['trial_id'] == trial_id]['spikes_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
+        data  = self.dataset[self.dataset['trial_id'] == trial_id][self.spk_field + '_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
         data = self.transform(data)
         return data, self.neuron_ids, trial_id
 
@@ -158,7 +160,7 @@ if __name__ == '__main__':
     nwb_train = NWB(experiment=1, mode='train', resample_val=5,
                     seq_len=10, neur_count = 100, N_seq=50)
     nwb_val = NWB(experiment=1, mode='val', resample_val=5,
-                    seq_len=10, neur_count = 100, N_seq=50)
+                    seq_len=10, neur_count = 100, N_seq=10)
     print(nwb_train[1])
     print(nwb_val[1])
     print(len(nwb_val))
