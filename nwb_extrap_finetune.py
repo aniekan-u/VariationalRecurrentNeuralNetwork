@@ -27,8 +27,10 @@ def train(epoch, train_loader, clip, optimizer):
         
         #forward + backward + optimize
         optimizer.zero_grad()
-        kld_loss, nll_loss, pred, _, _ = model.extrap(data)
-        loss = kld_loss + nll_loss
+        start, end = seq_len_primer, seq_len_primer + seq_len_extrap
+        kld_loss, nll_loss, pred, _, _ = model.extrap(data[:start,:,:])
+        MSE = torch.mean((data[start:end,:,:] - pred)**2)
+        loss = kld_loss + nll_loss + MSE
         loss.backward()
         optimizer.step()
 
@@ -111,7 +113,9 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     batch_size = 4
     n_train_seq = 1000
-    seq_len_train = 50
+    seq_len_primer = 50
+    seq_len_extrap = 10
+    seq_len_train = seq_len_primer + seq_len_extrap
     seed = 1
     
     # Events
