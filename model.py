@@ -119,18 +119,17 @@ class VRNN(nn.Module):
             all_dec_mean.append(dec_mean_t)
             all_dec_std.append(dec_std_t)
 
-        return kld_loss, nll_loss, \
-            (all_enc_mean, all_enc_std), \
-            (all_dec_mean, all_dec_std)
+        return kld_loss, nll_loss, (all_enc_mean, all_enc_std), (all_dec_mean, all_dec_std), h
 
 
-    def sample(self, seq_len):
+    def sample(self, seq_len, h=None):
 
         sample = torch.zeros(seq_len, self.x_dim, device=device)
-
-        h = torch.zeros(self.n_layers, 1, self.h_dim, device=device)
+        
+        if h is None:
+            h = torch.zeros(self.n_layers, 1, self.h_dim, device=device)
+        
         for t in range(seq_len):
-
             #prior
             prior_t = self.prior(h[-1])
             prior_mean_t = self.prior_mean(prior_t)
@@ -154,11 +153,13 @@ class VRNN(nn.Module):
 
         return sample
 
+    def extrapolate(self, x, extrap_len):
+        _, _, _, _, h = self.foward(x)
+        return self.sample(extrap_len, h)
 
     def reset_parameters(self, stdv=1e-1):
         for weight in self.parameters():
             weight.data.normal_(0, stdv)
-
 
     def _init_weights(self, stdv):
         pass

@@ -30,7 +30,7 @@ def test(epoch, test_loader):
             data = data.squeeze().transpose(0, 1)
             data = (data - data.min()) / (data.max() - data.min())
 
-            kld_loss, nll_loss, _, _ = model(data)
+            kld_loss, nll_loss, _, _, _ = model(data)
             mean_kld_loss += kld_loss.item()
             mean_nll_loss += nll_loss.item()
 
