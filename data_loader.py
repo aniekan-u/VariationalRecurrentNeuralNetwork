@@ -63,7 +63,7 @@ class NWB(data.Dataset):
         if self.mode == 'train' or self.mode == 'val':
             dataset = NWBDataset(data_path, "*train", split_heldout=True, skip_fields=drop_col)
         if self.mode == 'test':
-            dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
+            dataset = NWBDataset(data_path, "*test", split_heldout=True, skip_fields=drop_col)
 
         # Picking subset of spikes
         if self.mode == 'val':
@@ -79,8 +79,8 @@ class NWB(data.Dataset):
         if neur_count == 0:
             self.neur_count = len(self.neuron_ids)
 
-        spk_drop_col = [(self.spk_field, spk) for spk in self.neuron_ids[neur_count:]]
-        self.neuron_ids = self.neuron_ids[:neur_count]
+        spk_drop_col = [(self.spk_field, spk) for spk in self.neuron_ids[self.neur_count:]]
+        self.neuron_ids = self.neuron_ids[:self.neur_count]
         dataset.data.drop(spk_drop_col, axis=1, inplace=True)
 
         print(f'neuron IDs: {self.neuron_ids}')
@@ -161,6 +161,6 @@ if __name__ == '__main__':
                     seq_len=10, neur_count = 100, N_seq=50)
     nwb_val = NWB(experiment=1, mode='val', resample_val=5,
                     seq_len=10, neur_count = 100, N_seq=10)
-    print(nwb_train[1])
-    print(nwb_val[1])
-    print(len(nwb_val))
+    #print(nwb_train[1])
+    #print(nwb_val[1])
+    #print(len(nwb_val))
