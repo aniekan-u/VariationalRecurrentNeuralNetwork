@@ -15,7 +15,7 @@ Neural Network (VRNN) from https://arxiv.org/abs/1506.02216
 using unimodal isotropic gaussian distributions for
 inference, prior, and generating models."""
 
-def train(epoch, train_loader, clip):
+def train(epoch, train_loader, clip, optimizer):
     train_loss = 0
     for batch_idx, (data, _, _) in enumerate(train_loader):
 
@@ -58,13 +58,13 @@ def train(epoch, train_loader, clip):
         epoch, train_loss / len(train_loader.dataset)))
 
 
-def test(epoch, test_loader):
+def validate(epoch, val_loader):
     """uses test data to evaluate
     likelihood of the model"""
 
     mean_kld_loss, mean_nll_loss = 0, 0
     with torch.no_grad():
-        for i, (data, _, _) in enumerate(test_loader):
+        for i, (data, _, _) in enumerate(val_loader):
 
             #transforming data
             data = data.to(torch.float)
@@ -76,12 +76,12 @@ def test(epoch, test_loader):
             mean_kld_loss += kld_loss.item()
             mean_nll_loss += nll_loss.item()
 
-    mean_kld_loss /= len(test_loader.dataset)
-    mean_nll_loss /= len(test_loader.dataset)
+    mean_kld_loss /= len(val_loader.dataset)
+    mean_nll_loss /= len(val_loader.dataset)
 
-    print('====> Test set loss: KLD Loss = {:.4f}, NLL Loss = {:.4f} '.format(
+    print('====> Validation set loss: KLD Loss = {:.4f}, NLL Loss = {:.4f} '.format(
         mean_kld_loss, mean_nll_loss))
-
+    return mean_kld_loss + mean_nll_loss
 
 # changing device
 if torch.cuda.is_available():
@@ -92,15 +92,13 @@ else:
 
 if __name__ == '__main__':
 
-    #device = torch.device('cpu')
-
     # Hyperparameters
     
     # Model Parameters
     x_dim = 100
     h_dim = 20
     z_dim = 16
-    n_layers =  1
+    n_layers = 1
     
     # Training Parameters
     n_epochs = 150
@@ -112,10 +110,12 @@ if __name__ == '__main__':
     seq_len_train = 50
     seq_len_test = 50 
     seed = 1
-
-    # IO
+    
+    # Events
     print_every = 20 # batches
     save_every = 10 # epochs
+    decay_every = 2 # epochs
+    decay_factor = 0.8 
 
     #manual seed
     np.random.seed(seed)
@@ -124,30 +124,45 @@ if __name__ == '__main__':
 
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
-    nwb_train = NWB(experiment=1, train=True, resample_val=5,
+    nwb_train = NWB(experiment=1, mode='train', resample_val=5,
                     seq_len=seq_len_train, neur_count = x_dim, N_seq=n_train_seq)
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
-    print("Creating Test Dataset and Dataloader...")
-    nwb_test = NWB(experiment=1, train=False, resample_val=5,
-                    seq_len=seq_len_test, neur_count = x_dim, N_seq=n_test_seq)
-    test_loader = torch.utils.data.DataLoader(nwb_test, batch_size=batch_size)
-
+    print("Creating Validation Dataset and Dataloader...")
+    nwb_val = NWB(experiment=1, mode='val', resample_val=5,
+                    seq_len=seq_len_train, neur_count = x_dim, N_seq=n_train_seq)
+    val_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
+    
     print("Creating Model...")
     model = VRNN(x_dim, h_dim, z_dim, n_layers)
     model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    
+    #Early stopping
+    patience = 3
+    old_val_loss = float('inf')
 
     print("Beginning Training...")
     for epoch in range(1, n_epochs + 1):
 
         #training + testing
-        train(epoch, train_loader, clip)
-        test(epoch, test_loader)
-
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        train(epoch, train_loader, clip, optimizer)
+        val_loss = validate(epoch, val_loader)
+        
+        improved = val_loss <  old_val_loss
+        old_val_loss = val_loss
+        patience = 3 if improved else patience - 1
+        
         #saving model
         if epoch % save_every == 1:
             fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to '+fn)
+        if patience == 0:
+            fn = 'final_saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+            torch.save(model.state_dict(), fn)
+            print('Saved model to '+fn)
+            break
 
+        if epoch % decay_every:
+            learning_rate *= decay_factor
