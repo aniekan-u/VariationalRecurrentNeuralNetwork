@@ -43,7 +43,7 @@ def train(epoch, train_loader, clip, optimizer):
                 kld_loss / batch_size,
                 nll_loss / batch_size))
 
-            sample = model.sample(torch.tensor(50, device=device))
+            sample = model.sample(torch.tensor(100, device=device))
             sample = sample.squeeze().to(torch.device('cpu')).numpy()
             ex_neur = np.random.permutation(sample.shape[1])
             plt.clf()
@@ -106,7 +106,8 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     batch_size = 4
     n_train_seq = 1000
-    seq_len_train = 50
+    n_val_seq = 200
+    seq_len = 100
     seed = 1
     
     # Events
@@ -124,13 +125,13 @@ if __name__ == '__main__':
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
     nwb_train = NWB(experiment=1, mode='train', resample_val=5,
-                    seq_len=seq_len_train, neur_count = x_dim, N_seq=n_train_seq)
+                    seq_len=seq_len, neur_count = x_dim, N_seq=n_train_seq)
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
     print("Creating Validation Dataset and Dataloader...")
     nwb_val = NWB(experiment=1, mode='val', resample_val=5,
-                    seq_len=seq_len_train, neur_count = x_dim, N_seq=n_train_seq)
-    val_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
+                    seq_len=seq_len, neur_count = x_dim, N_seq=n_val_seq)
+    val_loader = torch.utils.data.DataLoader(nwb_val, batch_size=batch_size)
     
     print("Creating Model...")
     model = VRNN(x_dim, h_dim, z_dim, n_layers)
@@ -157,11 +158,13 @@ if __name__ == '__main__':
             fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to '+fn)
-        if patience == 0:
+        if patience == 0 or epoch ==  n_epochs:
             fn = 'final_saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to '+fn)
             break
 
-        if epoch > start_decay and epoch % decay_every and learning_rate > 0.0001:
+        if epoch > start_decay and epoch % decay_every:
             learning_rate *= decay_factor
+            if learning_rate < 0.0001:
+                learning_rate = 0.0001
