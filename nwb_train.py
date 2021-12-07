@@ -44,7 +44,7 @@ def train(epoch, train_loader, clip, optimizer):
                 nll_loss / batch_size))
 
             sample = model.sample(torch.tensor(50, device=device))
-            sample = sample.to(torch.device('cpu')).numpy()
+            sample = sample.squeeze().to(torch.device('cpu')).numpy()
             ex_neur = np.random.permutation(sample.shape[1])
             plt.clf()
             plt.plot(sample[:,ex_neur[:25]])

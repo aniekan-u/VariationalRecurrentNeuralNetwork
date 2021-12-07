@@ -122,12 +122,12 @@ class VRNN(nn.Module):
         return kld_loss, nll_loss, (all_enc_mean, all_enc_std), (all_dec_mean, all_dec_std), h
 
 
-    def sample(self, seq_len, h=None):
+    def sample(self, seq_len, batchsize=1, h=None):
 
-        sample = torch.zeros(seq_len, self.x_dim, device=device)
+        sample = torch.zeros((seq_len, batchsize, self.x_dim), device=device)
         
         if h is None:
-            h = torch.zeros(self.n_layers, 1, self.h_dim, device=device)
+            h = torch.zeros(self.n_layers, batchsize, self.h_dim, device=device)
         
         for t in range(seq_len):
             #prior
@@ -154,8 +154,9 @@ class VRNN(nn.Module):
         return sample
 
     def extrapolate(self, x, extrap_len):
-        _, _, _, _, h = self.foward(x)
-        return self.sample(extrap_len, h)
+        kld_loss, nll_loss, enc_params, dec_params, h = self.foward(x)
+        preds = self.sample(extrap_len, x.size(1), h)
+        return kld_loss, nll_loss, preds, enc_params, dec_params
 
     def reset_parameters(self, stdv=1e-1):
         for weight in self.parameters():
