@@ -10,7 +10,7 @@ import torch
 
 
 class NWB(data.Dataset):
-    def __init__(self, experiment, train, resample_val, seq_len, neur_count, N_seq, shuffle=False, seq_start_mode='all', transform=None):
+    def __init__(self, experiment, mode, resample_val, seq_len, neur_count, N_seq, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
         INPUT
@@ -37,7 +37,7 @@ class NWB(data.Dataset):
 
         assert experiment in [i+1 for i in range(4)], 'experiment must be in range 1-4'
         self.experiment = experiment
-        self.train = train
+        self.mode = mode
         self.seq_len = seq_len
         self.neur_count = neur_count
         assert seq_start_mode in {'all', 'unique'}, 'seq_start_mode must be in {all, unique}'
@@ -60,9 +60,9 @@ class NWB(data.Dataset):
             print("Downloading data")
             os.system('dandi download https://dandiarchive.org/dandiset/' + dandi_path + ' -o data/')
 
-        if self.train:
+        if self.mode == 'train' or self.mode == 'val':
             dataset = NWBDataset(data_path, "*train", split_heldout=False, skip_fields=drop_col)
-        else:
+        if self.mode == 'test':
             dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
 
         # Picking subset of spikes
@@ -131,8 +131,13 @@ class NWB(data.Dataset):
             self.N_sequences = len(possible_starts)
         else:
             self.N_sequences = N_seq
-        self.possible_starts = possible_starts[:self.N_sequences]
 
+        if self.mode == 'train':
+             self.possible_starts = possible_starts[:self.N_sequences]
+        elif self.mode == 'val':
+            self.possible_starts = possible_starts[self.N_sequences:int(1.2 * self.N_sequences)] # uses same N_seq for train and val
+            self.N_sequences = int(1.2 * self.N_sequences)
+    
     def __getitem__(self, index):
 
         trial_id, start = self.possible_starts[index]
@@ -150,8 +155,10 @@ if __name__ == '__main__':
     #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
-    nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = 100)
-
-    print(nwb_train.__getitem__(1))
-
+    nwb_train = NWB(experiment=1, mode='train', resample_val=5,
+                    seq_len=10, neur_count = 100, N_seq=50)
+    nwb_val = NWB(experiment=1, mode='val', resample_val=5,
+                    seq_len=10, neur_count = 100, N_seq=50)
+    print(nwb_train[1])
+    print(nwb_val[1])
+    print(len(nwb_val))
