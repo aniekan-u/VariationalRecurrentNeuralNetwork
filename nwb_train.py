@@ -122,7 +122,11 @@ if __name__ == '__main__':
 
     # IO
     PLOT_SAMPLE = False
-
+    
+    # Directories
+    SAVES_DIR = f'./saves-x{x_dim}h{h_dim}z{z_dim}la{n_layers}_ns{n_seq}sl{seq_len}_sd{start_decay}p{MAX_PATIENCE}/'
+    if not os.path.isdir(SAVES_DIR): os.mkdir(SAVES_DIR)
+    
     #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -162,11 +166,11 @@ if __name__ == '__main__':
         
         #saving model
         if epoch % save_every == 1:
-                fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+                fn = SAVES_DIR + 'vrnn_nwb_state_dict_'+str(epoch)+'.pth'
                 torch.save(model.state_dict(), fn)
                 print('Saved model to '+fn)
         if patience == 0 or epoch ==  n_epochs:
-                fn = 'final_saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+                fn = SAVES_DIR + 'vrnn_nwb_final_state_dict_'+str(epoch)+'.pth'
                 torch.save(model.state_dict(), fn)
                 print('Saved model to '+fn)
                 break
