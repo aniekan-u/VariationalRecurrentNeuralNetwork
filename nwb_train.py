@@ -94,84 +94,84 @@ else:
 
 if __name__ == '__main__':
 
-	# Hyperparameters
+    # Hyperparameters
 
-	# Model Parameters
-	x_dim = 100
-	h_dim = 20
-	z_dim = 16
-	n_layers = 1
+    # Model Parameters
+    x_dim = 100
+    h_dim = 20
+    z_dim = 16
+    n_layers = 1
 
-	# Training Parameters
-	n_epochs = 150
-	clip = 10
-	learning_rate = 1e-3
-	batch_size = 128
-	parts = {'train': .8, 'val': .2}
-	n_seq = 1000
-	seq_len = 100
-	seed = 1
+    # Training Parameters
+    n_epochs = 150
+    clip = 10
+    learning_rate = 1e-3
+    batch_size = 128
+    parts = {'train': .8, 'val': .2}
+    n_seq = 1000
+    seq_len = 100
+    seed = 1
 
-	# Events
-	print_every = 20 # batches
-	save_every = 10 # epochs
-	decay_every = 10 # epochs
-	decay_factor = 0.5 
-	start_decay = 40
-	MAX_PATIENCE = 10
+    # Events
+    print_every = 20 # batches
+    save_every = 10 # epochs
+    decay_every = 10 # epochs
+    decay_factor = 0.5 
+    start_decay = 40
+    MAX_PATIENCE = 10
 
-	# IO
-	PLOT_SAMPLE = False
+    # IO
+    PLOT_SAMPLE = False
 
-	#manual seed
-	np.random.seed(seed)
-	torch.manual_seed(seed)
-	plt.ion()
+    #manual seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    plt.ion()
 
-	#init model + optimizer + datasets
-	print("Creating Training Dataset and Dataloader...")
-	nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=seq_len, neur_count = x_dim,
-					N_seq=n_seq, parts_fract_seq=parts, shuffle=True, seq_start_mode='unique')
-	nwb_train.set_curr_part('train')
-	train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
+    #init model + optimizer + datasets
+    print("Creating Training Dataset and Dataloader...")
+    nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=seq_len, neur_count = x_dim,
+                                    N_seq=n_seq, parts_fract_seq=parts, shuffle=True, seq_start_mode='unique')
+    nwb_train.set_curr_part('train')
+    train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
-	print("Creating Validation Dataset and Dataloader...")
-	nwb_val = copy(nwb_train)
-	nwb_val.set_curr_part('val')
-	val_loader = torch.utils.data.DataLoader(nwb_val, batch_size=batch_size)
+    print("Creating Validation Dataset and Dataloader...")
+    nwb_val = copy(nwb_train)
+    nwb_val.set_curr_part('val')
+    val_loader = torch.utils.data.DataLoader(nwb_val, batch_size=batch_size)
 
-	print("Creating Model...")
-	model = VRNN(x_dim, h_dim, z_dim, n_layers)
-	model = model.to(device)
+    print("Creating Model...")
+    model = VRNN(x_dim, h_dim, z_dim, n_layers)
+    model = model.to(device)
 
-	#Early stopping
-	patience = MAX_PATIENCE
-	old_val_loss = float('inf')
+    #Early stopping
+    patience = MAX_PATIENCE
+    old_val_loss = float('inf')
 
-	print("Beginning Training...")
-	for epoch in range(1, n_epochs + 1):
+    print("Beginning Training...")
+    for epoch in range(1, n_epochs + 1):
 
-		#training + testing
-		optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-		train(epoch)
-		val_loss = validate(epoch)
-		
-		improved = val_loss <  old_val_loss
-		old_val_loss = val_loss
-		patience = MAX_PATIENCE if improved else patience - 1
-		
-		#saving model
-		if epoch % save_every == 1:
-			fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
-			torch.save(model.state_dict(), fn)
-			print('Saved model to '+fn)
-		if patience == 0 or epoch ==  n_epochs:
-			fn = 'final_saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
-			torch.save(model.state_dict(), fn)
-			print('Saved model to '+fn)
-			break
+        #training + testing
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        train(epoch)
+        val_loss = validate(epoch)
+        
+        improved = val_loss <  old_val_loss
+        old_val_loss = val_loss
+        patience = MAX_PATIENCE if improved else patience - 1
+        
+        #saving model
+        if epoch % save_every == 1:
+                fn = 'saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+                torch.save(model.state_dict(), fn)
+                print('Saved model to '+fn)
+        if patience == 0 or epoch ==  n_epochs:
+                fn = 'final_saves/vrnn_nwb_state_dict_'+str(epoch)+'.pth'
+                torch.save(model.state_dict(), fn)
+                print('Saved model to '+fn)
+                break
 
-		if epoch > start_decay and epoch % decay_every:
-			learning_rate *= decay_factor
-			if learning_rate < 0.0001:
-				learning_rate = 0.0001
+        if epoch > start_decay and epoch % decay_every:
+                learning_rate *= decay_factor
+                if learning_rate < 0.0001:
+                        learning_rate = 0.0001
