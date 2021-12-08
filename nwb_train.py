@@ -1,3 +1,4 @@
+import os
 import math
 from copy import copy, deepcopy
 import torch
@@ -105,16 +106,14 @@ if __name__ == '__main__':
     # Training Parameters
     n_epochs = 150
     clip = 10
-    learning_rate = 1e-3
-    batch_size = 128
+    batch_size = 4
     parts = {'train': .8, 'val': .2}
     n_seq = 1000
     seq_len = 100
     seed = 1
 
-    # Events
-    print_every = 20 # batches
-    save_every = 10 # epochs
+    # Learning Rate Schedule
+    learning_rate = 1e-3
     decay_every = 10 # epochs
     decay_factor = 0.5 
     start_decay = 40
@@ -122,9 +121,11 @@ if __name__ == '__main__':
 
     # IO
     PLOT_SAMPLE = False
+    print_every = 20 # batches
+    save_every = 10 # epochs
     
     # Directories
-    SAVES_DIR = f'./saves-x{x_dim}h{h_dim}z{z_dim}la{n_layers}_ns{n_seq}sl{seq_len}_sd{start_decay}p{MAX_PATIENCE}/'
+    SAVES_DIR = f'./saves_x{x_dim}h{h_dim}z{z_dim}la{n_layers}_e{n_epochs}b{batch_size}ns{n_seq}sl{seq_len}s{seed}_sd{start_decay}p{MAX_PATIENCE}/'
     if not os.path.isdir(SAVES_DIR): os.mkdir(SAVES_DIR)
     
     #manual seed
