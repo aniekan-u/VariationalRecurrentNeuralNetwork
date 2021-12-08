@@ -104,11 +104,11 @@ if __name__ == '__main__':
     n_layers = 1
 
     # Training Parameters
-    n_epochs = 150
+    n_epochs = 1000
     clip = 10
-    batch_size = 4
+    batch_size = 128
     parts = {'train': .8, 'val': .2}
-    n_seq = 1000
+    n_seq = 10000
     seq_len = 100
     seed = 1
 
@@ -116,12 +116,12 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     decay_every = 10 # epochs
     decay_factor = 0.5 
-    start_decay = 40
+    start_decay = 500
     MAX_PATIENCE = 10
 
     # IO
     PLOT_SAMPLE = False
-    print_every = 20 # batches
+    print_every = math.ceil(n_seq/(10*batch_size)) # batches
     save_every = 10 # epochs
     
     # Directories
