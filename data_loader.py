@@ -1,5 +1,5 @@
 import os
-import json
+from copy import copy, deepcopy
 import numpy as np
 import pandas as pd
 import torch.utils.data as data
@@ -10,23 +10,24 @@ import torch
 
 
 class NWB(data.Dataset):
-    def __init__(self, experiment, mode, resample_val, seq_len, neur_count, N_seq, shuffle=False, seq_start_mode='all', transform=None):
+    def __init__(self, experiment, train, resample_val, seq_len, neur_count, N_seq, parts_fract_seq=None, shuffle=False, seq_start_mode='all', transform=None):
 
         '''
         INPUT
-        experiment     int from 1-4 chooses experiment (1: MC_Maze_Medium, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
-        train          bool true -> train, false -> test
-        resample_val   int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
-        seq_len        int length of individual sequences
-        neur_count     int count of neurons per trial,         0 for full length
-        N_seq          int number of unique seqs               0 for max
-        seq_start_mode str                                     ['all', 'unique']
-        tranform       function
+        experiment       int from 1-4 chooses experiment (1: MC_Maze_Medium, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
+        train            bool true -> train, false -> test
+        resample_val     int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
+        seq_len          int length of individual sequences
+        neur_count       int count of neurons per trial,         0 for full length
+        N_seq            int total number of sequences           0 for max
+        parts_fract_seq  dict maps partition -> fract            0-1
+        seq_start_mode   str                                     ['all', 'unique']
+        tranform         function
 
         OUTPUT
-        neuron_id      2d int-array of neuron ids in data
-        trial_id       1d int-array of trial ids in data
-        data           3d numpy array of trials x neurons x sequences
+        neuron_id        2d int-array of neuron ids in data
+        trial_id         1d int-array of trial ids in data
+        data             3d numpy array of trials x neurons x sequences
         '''
 
         # Experiment meta info
@@ -37,9 +38,16 @@ class NWB(data.Dataset):
 
         assert experiment in [i+1 for i in range(4)], 'experiment must be in range 1-4'
         self.experiment = experiment
-        self.mode = mode
+        self.train = train
         self.seq_len = seq_len
         self.neur_count = neur_count
+        if parts_fract_seq is None:
+            self.parts_fract_seq = {'default': 1.}
+            self.curr_part = 'default'
+        else:
+            assert sum(parts_fract_seq.values()) == 1., 'partitions must sum to 1.'
+            self.parts_fract_seq = parts_fract_seq
+            self.curr_part = None
         assert seq_start_mode in {'all', 'unique'}, 'seq_start_mode must be in {all, unique}'
         self.seq_start_mode = seq_start_mode
         self.transform = transform if transform else lambda x:x
@@ -60,26 +68,19 @@ class NWB(data.Dataset):
             print("Downloading data")
             os.system('dandi download https://dandiarchive.org/dandiset/' + dandi_path + ' -o data/')
 
-        if self.mode == 'train' or self.mode == 'val':
-            dataset = NWBDataset(data_path, "*train", split_heldout=True, skip_fields=drop_col)
-        if self.mode == 'test':
-            dataset = NWBDataset(data_path, "*test", split_heldout=True, skip_fields=drop_col)
+        if self.train:
+            dataset = NWBDataset(data_path, "*train", split_heldout=False, skip_fields=drop_col)
+        else:
+            dataset = NWBDataset(data_path, "*test", split_heldout=False, skip_fields=drop_col)
 
         # Picking subset of spikes
-        if self.mode == 'val':
-            self.spk_field = 'heldout_spikes'
-            dataset.data.drop('spikes', axis=1, inplace=True)
-        else:
-            self.spk_field = 'spikes'
-            dataset.data.drop('heldout_spikes', axis=1, inplace=True)
-
-        self.neuron_ids = np.array(dataset.data[self.spk_field].keys().tolist())
+        self.neuron_ids = np.array(dataset.data['spikes'].keys().tolist())
         np.random.shuffle(self.neuron_ids)
 
         if neur_count == 0:
             self.neur_count = len(self.neuron_ids)
 
-        spk_drop_col = [(self.spk_field, spk) for spk in self.neuron_ids[self.neur_count:]]
+        spk_drop_col = [('spikes', spk) for spk in self.neuron_ids[self.neur_count:]]
         self.neuron_ids = self.neuron_ids[:self.neur_count]
         dataset.data.drop(spk_drop_col, axis=1, inplace=True)
 
@@ -98,7 +99,7 @@ class NWB(data.Dataset):
         self.trial_ids = np.unique(self.dataset['trial_id'])
         eligible_trials = {} # ID -> size
         ineligible_trials = [] # ID
-        max_neur_count = len(self.dataset[self.spk_field])
+        max_neur_count = len(self.dataset['spikes'])
         assert max_neur_count >= self.neur_count, f'decrease neuron count, max: {max_neur_count}'
 
         # Only include trials of suffecient length
@@ -132,24 +133,47 @@ class NWB(data.Dataset):
             for ID in self.trial_ids:
                 lt = [(ID,t) for t in range(0,eligible_trials[ID] - self.seq_len, self.seq_len)]
                 possible_starts.extend(lt)
-
+        
+        self.possible_starts = {}
         if N_seq > len(possible_starts) or N_seq == 0:
-            self.N_sequences = len(possible_starts)
-        else:
-            self.N_sequences = N_seq
-
-        self.possible_starts = possible_starts[:self.N_sequences]
+            N_seq = len(possible_starts)
+        
+        self.N_sequences = 0
+        start = 0
+        for part, fract in self.parts_fract_seq.items():
+            n_seq = int(fract * N_seq)
+            self.N_sequences += n_seq
+            self.possible_starts[part] = possible_starts[start:start + n_seq]
+            start += n_seq
     
+    def set_curr_part(self, part):
+        assert part in self.parts_fract_seq.keys(), 'Invalid partition'
+        self.curr_part = part
+
     def __getitem__(self, index):
-
-        trial_id, start = self.possible_starts[index]
-        data  = self.dataset[self.dataset['trial_id'] == trial_id][self.spk_field + '_smth_50'][self.neuron_ids][start:start + self.seq_len].to_numpy()
-        data = self.transform(data)
+        assert self.curr_part is not None, 'Set the current partition'
+        trial_id, start = self.possible_starts[self.curr_part][index]
+        data = self.dataset[self.dataset['trial_id'] == trial_id]
+        data = data['spikes_smth_50'][self.neuron_ids]
+        data = self.transform(data[start:start + self.seq_len].to_numpy())
         return data, self.neuron_ids, trial_id
-
+    
     def __len__(self):
-        return self.N_sequences
+        return len(self.possible_starts[self.curr_part])
 
+    def __copy__(self):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        obj.__dict__.update(self.__dict__)
+        return obj
+    
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            setattr(obj, k, deepcopy(v, memo))
+        return obj
 
 if __name__ == '__main__':
     seed = 128
@@ -157,10 +181,10 @@ if __name__ == '__main__':
     #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
-    nwb_train = NWB(experiment=1, mode='train', resample_val=5,
-                    seq_len=10, neur_count = 100, N_seq=50)
-    nwb_val = NWB(experiment=1, mode='val', resample_val=5,
-                    seq_len=10, neur_count = 100, N_seq=10)
-    #print(nwb_train[1])
-    #print(nwb_val[1])
-    #print(len(nwb_val))
+    parts = {'train': .8, 'val': .2}
+    nwb_train = NWB(experiment=1, train=True, resample_val=5,
+                    seq_len=10, neur_count = 100, N_seq=100, parts_fract_seq=parts)
+    
+    nwb_train.set_curr_part('val')
+    print(nwb_train[1])
+    print(len(nwb_train))

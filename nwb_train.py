@@ -1,4 +1,5 @@
 import math
+from copy import copy, deepcopy
 import torch
 import torch.nn as nn
 import torch.utils
@@ -105,8 +106,8 @@ if __name__ == '__main__':
     clip = 10
     learning_rate = 1e-3
     batch_size = 4
-    n_train_seq = 1000
-    n_val_seq = 200
+    parts = {'train': .8, 'val': .2}
+    n_seq = 100
     seq_len = 100
     seed = 1
     
@@ -124,13 +125,14 @@ if __name__ == '__main__':
 
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
-    nwb_train = NWB(experiment=1, mode='train', resample_val=5,
-                    seq_len=seq_len, neur_count = x_dim, N_seq=n_train_seq)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=seq_len,
+                    neur_count = x_dim, N_seq=n_seq, parts_fract_seq=parts)
+    nwb_train.set_curr_part('train')
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
     print("Creating Validation Dataset and Dataloader...")
-    nwb_val = NWB(experiment=1, mode='val', resample_val=5,
-                    seq_len=seq_len, neur_count = x_dim, N_seq=n_val_seq)
+    nwb_val = copy(nwb_train)
+    nwb_val.set_curr_part('val')
     val_loader = torch.utils.data.DataLoader(nwb_val, batch_size=batch_size)
     
     print("Creating Model...")
