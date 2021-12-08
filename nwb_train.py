@@ -107,7 +107,7 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     batch_size = 4
     parts = {'train': .8, 'val': .2}
-    n_seq = 100
+    n_seq = 1000
     seq_len = 100
     seed = 1
     
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     decay_every = 10 # epochs
     decay_factor = 0.5 
     start_decay = 40
-
+    MAX_PATIENCE = 10
     #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -125,8 +125,8 @@ if __name__ == '__main__':
 
     #init model + optimizer + datasets
     print("Creating Training Dataset and Dataloader...")
-    nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=seq_len,
-                    neur_count = x_dim, N_seq=n_seq, parts_fract_seq=parts)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=seq_len, neur_count = x_dim,
+                    N_seq=n_seq, parts_fract_seq=parts, shuffle=True, seq_start_mode='unique')
     nwb_train.set_curr_part('train')
     train_loader = torch.utils.data.DataLoader(nwb_train, batch_size=batch_size)
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     model = model.to(device)
     
     #Early stopping
-    patience = 3
+    patience = MAX_PATIENCE
     old_val_loss = float('inf')
 
     print("Beginning Training...")
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         
         improved = val_loss <  old_val_loss
         old_val_loss = val_loss
-        patience = 3 if improved else patience - 1
+        patience = MAX_PATIENCE if improved else patience - 1
         
         #saving model
         if epoch % save_every == 1:

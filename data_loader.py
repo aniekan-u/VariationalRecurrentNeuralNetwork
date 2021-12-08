@@ -182,9 +182,10 @@ if __name__ == '__main__':
     np.random.seed(seed)
     torch.manual_seed(seed)
     parts = {'train': .8, 'val': .2}
-    nwb_train = NWB(experiment=1, train=True, resample_val=5,
-                    seq_len=10, neur_count = 100, N_seq=100, parts_fract_seq=parts)
+    nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=10, neur_count = 100,
+                    N_seq=100, parts_fract_seq=parts, seq_start_mode='unique')
     
     nwb_train.set_curr_part('val')
+    print(nwb_train.possible_starts)
     print(nwb_train[1])
     print(len(nwb_train))
