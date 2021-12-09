@@ -105,7 +105,7 @@ if __name__ == '__main__':
     n_layers = 1
 
     # Training Parameters
-    n_epochs = 1000
+    n_epochs = 350
     clip = 10
     batch_size = 128
     parts = {'train': .8, 'val': .2}

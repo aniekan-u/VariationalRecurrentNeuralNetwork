@@ -184,17 +184,18 @@ class NWB(data.Dataset):
         return obj
 
 if __name__ == '__main__':
-    seed = 128
+	seed = 128
 
-    #manual seed
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
-    parts = {'train': .8, 'val': .2}
-    nwb_train = NWB(experiment=0, train=True, resample_val=5, seq_len=10, neur_count = 100,
-                    N_seq=10000, parts_fract_seq=parts, shuffle=True,  seq_start_mode='unique')
-    
-    nwb_train.set_curr_part('val')
-    # print(nwb_train.possible_starts)
-    print(nwb_train[1])
-    print(len(nwb_train))
+	#manual seed
+	np.random.seed(seed)
+	torch.manual_seed(seed)
+	random.seed(seed)
+	parts = {'train': .8, 'val': .2}
+	nwb_train = NWB(experiment=0, train=True, resample_val=5, seq_len=10, neur_count = 100,
+					N_seq=0, parts_fract_seq=parts, shuffle=True,  seq_start_mode='unique')
+
+	nwb_train.set_curr_part('val')
+	# print(nwb_train.possible_starts)
+	print(nwb_train[1])
+	print(len(nwb_train))
+	print(f'Total number of sequences: {nwb_train.get_total_num_seq()}')
