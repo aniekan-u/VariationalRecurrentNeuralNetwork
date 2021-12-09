@@ -103,6 +103,7 @@ if __name__ == '__main__':
     h_dim = 20
     z_dim = 16
     n_layers = 1
+	print(f'x: {x_dim}, h: {h_dim}, z: {z_dim}')
 
     # Training Parameters
     n_epochs = 350
@@ -112,6 +113,7 @@ if __name__ == '__main__':
     n_seq = 10000
     seq_len = 100
     seed = 1
+	print(f'e: {n_epochs}, ns~: {n_seq}, sl: {seq_len}, s: {seed}')
 
     # Learning Rate Schedule
     learning_rate = 1e-3
@@ -119,6 +121,7 @@ if __name__ == '__main__':
     decay_factor = 0.5 
     start_decay = 500
     MAX_PATIENCE = 10
+	print(f'sd: {start_decay}, p: {MAX_PATIENCE}')
 
     # Manual seed
     np.random.seed(seed)
@@ -140,7 +143,8 @@ if __name__ == '__main__':
     
     #update n_seq
     n_seq = nwb_train.get_total_num_seq()
-    
+    print(f'ns: {n_seq}')
+
     # IO
     PLOT_SAMPLE = True
     print_every = math.ceil(parts['train']*n_seq/(10*batch_size)) # batches
@@ -150,7 +154,8 @@ if __name__ == '__main__':
     # Directories
     SAVES_DIR = f'./saves_x{x_dim}h{h_dim}z{z_dim}la{n_layers}_e{n_epochs}b{batch_size}ns{n_seq}sl{seq_len}s{seed}_sd{start_decay}p{MAX_PATIENCE}/'
     if not os.path.isdir(SAVES_DIR): os.mkdir(SAVES_DIR)
-    
+    print(f'SAVES DIR: {SAVES_DIR}')
+
     # Creating Model
     print("Creating Model...")
     model = VRNN(x_dim, h_dim, z_dim, n_layers)
