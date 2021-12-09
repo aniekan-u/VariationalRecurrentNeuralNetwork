@@ -1,4 +1,5 @@
 import os
+import warnings
 from copy import copy, deepcopy
 import numpy as np
 import pandas as pd
@@ -137,7 +138,8 @@ class NWB(data.Dataset):
         self.possible_starts = {}
         if N_seq > len(possible_starts) or N_seq == 0:
             N_seq = len(possible_starts)
-        
+            warnings.warn(f'Dataset only has {N_seq} possible sequences')
+
         self.N_sequences = 0
         start = 0
         for part, fract in self.parts_fract_seq.items():
@@ -149,6 +151,9 @@ class NWB(data.Dataset):
     def set_curr_part(self, part):
         assert part in self.parts_fract_seq.keys(), 'Invalid partition'
         self.curr_part = part
+    
+    def get_total_num_seq(self):
+        return self.N_sequences
 
     def __getitem__(self, index):
         assert self.curr_part is not None, 'Set the current partition'
