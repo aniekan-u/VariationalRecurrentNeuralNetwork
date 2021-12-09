@@ -103,7 +103,7 @@ if __name__ == '__main__':
     h_dim = 20
     z_dim = 16
     n_layers = 1
-	print(f'x: {x_dim}, h: {h_dim}, z: {z_dim}')
+    print(f'x: {x_dim}, h: {h_dim}, z: {z_dim}')
 
     # Training Parameters
     n_epochs = 350
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     n_seq = 10000
     seq_len = 100
     seed = 1
-	print(f'e: {n_epochs}, ns~: {n_seq}, sl: {seq_len}, s: {seed}')
+    print(f'e: {n_epochs}, ns~: {n_seq}, sl: {seq_len}, s: {seed}')
 
     # Learning Rate Schedule
     learning_rate = 1e-3
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     decay_factor = 0.5 
     start_decay = 500
     MAX_PATIENCE = 10
-	print(f'sd: {start_decay}, p: {MAX_PATIENCE}')
+    print(f'sd: {start_decay}, p: {MAX_PATIENCE}')
 
     # Manual seed
     np.random.seed(seed)
