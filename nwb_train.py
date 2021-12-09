@@ -1,4 +1,5 @@
 import os
+import random
 import math
 from copy import copy, deepcopy
 import torch
@@ -122,6 +123,7 @@ if __name__ == '__main__':
     # Manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
+    random.seed(seed)
     plt.ion()
 
     # Init Datasets and Dataloaders

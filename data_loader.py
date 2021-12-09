@@ -1,5 +1,6 @@
 import os
 import warnings
+import random
 from copy import copy, deepcopy
 import numpy as np
 import pandas as pd
@@ -135,6 +136,7 @@ class NWB(data.Dataset):
                 lt = [(ID,t) for t in range(0,eligible_trials[ID] - self.seq_len, self.seq_len)]
                 possible_starts.extend(lt)
         
+        if shuffle: random.shuffle(possible_starts)
         self.possible_starts = {}
         if N_seq > len(possible_starts) or N_seq == 0:
             N_seq = len(possible_starts)
@@ -186,9 +188,10 @@ if __name__ == '__main__':
     #manual seed
     np.random.seed(seed)
     torch.manual_seed(seed)
+    random.seed(seed)
     parts = {'train': .8, 'val': .2}
     nwb_train = NWB(experiment=1, train=True, resample_val=5, seq_len=10, neur_count = 100,
-                    N_seq=100, parts_fract_seq=parts, seq_start_mode='unique')
+                    N_seq=100, parts_fract_seq=parts, shuffle=True,  seq_start_mode='unique')
     
     nwb_train.set_curr_part('val')
     print(nwb_train.possible_starts)
