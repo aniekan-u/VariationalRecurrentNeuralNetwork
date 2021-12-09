@@ -16,7 +16,7 @@ class NWB(data.Dataset):
 
         '''
         INPUT
-        experiment       int from 1-4 chooses experiment (0: MC_Maze_Large, 1: MC_Maze_Medium, 2: MC_RTT, 3: Area2_Bump, 4: DMFC_RSG)
+        experiment       int from 0-5 chooses experiment (0: MC_Maze, 1: MC_Maze_Large, 2: MC_Maze_Medium, 3: MC_RTT, 4: Area2_Bump, 5: DMFC_RSG)
         train            bool true -> train, false -> test
         resample_val     int determines factor of resampling,    1 returns original, once resampled need to redownload to get original (delete folder)
         seq_len          int length of individual sequences
@@ -34,11 +34,12 @@ class NWB(data.Dataset):
 
         # Experiment meta info
 
-        EXP_STR = {0: ('000128', 'sub-Jenkins'), 1: ('000139','sub-Jenkins'), 2: ('000129','sub-Indy'), 3: ('000127','sub-Han'), 4: ('000130', 'sub-Hadyn')}
+        EXP_STR = {0: ('000128', 'sub-Jenkins'), 1: ('000138','sub-Jenkins'), 2: ('000139','sub-Jenkins'), 
+                    3: ('000129','sub-Indy'), 4: ('000127','sub-Han'), 5: ('000130', 'sub-Hadyn')}
 
         # Instance variables
 
-        assert experiment in [i for i in range(4)], 'experiment must be in range 0-4'
+        assert experiment in [i for i in range(6)], 'experiment must be in range 0-5'
         self.experiment = experiment
         self.train = train
         self.seq_len = seq_len
