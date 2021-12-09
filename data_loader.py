@@ -192,7 +192,7 @@ if __name__ == '__main__':
 	random.seed(seed)
 	parts = {'train': .8, 'val': .2}
 	nwb_train = NWB(experiment=0, train=True, resample_val=5, seq_len=10, neur_count = 100,
-					N_seq=0, parts_fract_seq=parts, shuffle=True,  seq_start_mode='unique')
+					N_seq=int(1e5), parts_fract_seq=parts, shuffle=True,  seq_start_mode='unique')
 
 	nwb_train.set_curr_part('val')
 	# print(nwb_train.possible_starts)
